@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package proto;
+
+service MailService {
+    rpc SendMail (MailRequest) returns (MailReply) {}
+}
+
+message MailRequest {
+    string receiver = 1;
+    string subject = 2;
+
+}
+
+message MailReply {
+    string response = 1;
+}
