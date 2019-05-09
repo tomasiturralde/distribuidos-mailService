@@ -2,13 +2,15 @@ syntax = "proto3";
 
 package proto;
 
+import "product.proto";
+
 service MailService {
     rpc SendMail (MailRequest) returns (MailReply) {}
 }
 
 message MailRequest {
     int64 userId = 1;
-    repeated int64 productsId = 2;
+    repeated ProductReply products = 2;
 
 }
 

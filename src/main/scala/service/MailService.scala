@@ -19,7 +19,10 @@ class MailService(serviceManager: ServiceManager)(implicit ec: ExecutionContext)
       val future: Try[GetUserResponse] = Await.ready(result, Duration.apply(5, "second")).value.get
 
       future match {
-        case Success(value) => getProducts(value, request)
+        case Success(value) =>
+          print("mail sent to: " + value.email + "\n Content: \n")
+          request.products.foreach(prod => {print("\t" + prod.name + "\n")})
+          Future.successful(MailReply("mail sent"))
         case Failure(exception: StatusRuntimeException) =>
           if(exception.getStatus.getCode == Status.Code.UNAVAILABLE) {
             println("Get another stub")
@@ -27,41 +30,6 @@ class MailService(serviceManager: ServiceManager)(implicit ec: ExecutionContext)
           } else throw exception
       }
     })
-  }
-
-  private def getProducts(user: GetUserResponse, request: MailRequest): Future[MailReply] = {
-    getProductStub.flatMap(stub => {
-      val result = request.productsId
-        .map(id => stub.getProduct(ProductRequest(id)))
-
-      val result2 = Future.sequence(result)
-
-      val future = Await.ready(result2, Duration.apply(5, "second")).value.get
-
-      future match {
-        case Success(value) =>
-          print("mail sent to: " + user.email + "\n Content: \n")
-          value.foreach(prod => {print("\t" + prod.name + "\n")})
-          Future.successful(MailReply("mail sent"))
-        case Failure(exception: StatusRuntimeException) =>
-          if(exception.getStatus.getCode == Status.Code.UNAVAILABLE) {
-            println("Get another stub")
-            getProducts(user, request)
-          } else throw exception
-      }
-    })
-  }
-
-  private def getProductStub: Future[ProductServiceGrpc.ProductServiceStub] = {
-    serviceManager.getAddress("product").map{
-      case Some(value) =>
-        println(value.port)
-        val channel: ManagedChannel = ManagedChannelBuilder.forAddress(value.address, value.port)
-          .usePlaintext(true)
-          .build()
-        ProductServiceGrpc.stub(channel)
-      case None => throw new RuntimeException("No product services running")
-    }
   }
 
   private def getUserStub: Future[UserServiceGrpc.UserServiceStub] = {
