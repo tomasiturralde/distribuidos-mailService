@@ -4,35 +4,34 @@ import io.grpc.{ManagedChannel, ManagedChannelBuilder, Status, StatusRuntimeExce
 import proto.mail.{MailReply, MailRequest, MailServiceGrpc}
 import proto.user.{GetUserRequest, GetUserResponse, UserServiceGrpc}
 import proto.product.{ProductRequest, ProductServiceGrpc}
-import server.ServiceManager
+import proto.user.UserServiceGrpc.UserServiceStub
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class MailService(serviceManager: ServiceManager)(implicit ec: ExecutionContext) extends MailServiceGrpc.MailService{
+class MailService(userServiceStub: UserServiceStub)(implicit ec: ExecutionContext) extends MailServiceGrpc.MailService{
 
   override def sendMail(request: MailRequest): Future[MailReply] = {
-    getUserStub.flatMap( stub => {
-      val result: Future[GetUserResponse] = stub.getUser(GetUserRequest(request.userId))
 
-      val future: Try[GetUserResponse] = Await.ready(result, Duration.apply(5, "second")).value.get
+    val result: Future[GetUserResponse] = userServiceStub.getUser(GetUserRequest(request.userId))
 
-      future match {
-        case Success(value) =>
-          print("mail sent to: " + value.email + "\n Content: \n")
-          request.products.foreach(prod => {print("\t" + prod.name + "\n")})
-          Future.successful(MailReply("mail sent"))
-        case Failure(exception: StatusRuntimeException) =>
-          if(exception.getStatus.getCode == Status.Code.UNAVAILABLE) {
-            println("Get another stub")
-            sendMail(request)
-          } else throw exception
-      }
-    })
+    val future: Try[GetUserResponse] = Await.ready(result, Duration.apply(5, "second")).value.get
+
+    future match {
+      case Success(value) =>
+        print("mail sent to: " + value.email + "\n Content: \n")
+        request.products.foreach(prod => {print("\t" + prod.name + "\n")})
+        Future.successful(MailReply("mail sent"))
+      case Failure(exception: StatusRuntimeException) =>
+        if(exception.getStatus.getCode == Status.Code.UNAVAILABLE) {
+          println("Get another stub")
+          sendMail(request)
+        } else throw exception
+    }
   }
 
-  private def getUserStub: Future[UserServiceGrpc.UserServiceStub] = {
+  /*private def getUserStub: Future[UserServiceGrpc.UserServiceStub] = {
     serviceManager.getAddress("user").map{
       case Some(value) =>
         println(value.port)
@@ -42,5 +41,5 @@ class MailService(serviceManager: ServiceManager)(implicit ec: ExecutionContext)
         UserServiceGrpc.stub(channel)
       case None => throw new RuntimeException("No user services running")
     }
-  }
+  }*/
 }
