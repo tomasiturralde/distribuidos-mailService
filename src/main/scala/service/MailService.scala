@@ -5,16 +5,17 @@ import proto.mail.{MailReply, MailRequest, MailServiceGrpc}
 import proto.user.{GetUserRequest, GetUserResponse, UserServiceGrpc}
 import proto.product.{ProductRequest, ProductServiceGrpc}
 import proto.user.UserServiceGrpc.UserServiceStub
+import server.StubManager
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class MailService(userServiceStub: UserServiceStub)(implicit ec: ExecutionContext) extends MailServiceGrpc.MailService{
+class MailService(stubManager: StubManager)(implicit ec: ExecutionContext) extends MailServiceGrpc.MailService{
 
   override def sendMail(request: MailRequest): Future[MailReply] = {
 
-    val result: Future[GetUserResponse] = userServiceStub.getUser(GetUserRequest(request.userId))
+    val result: Future[GetUserResponse] = stubManager.userStub.getUser(GetUserRequest(request.userId))
 
     val future: Try[GetUserResponse] = Await.ready(result, Duration.apply(5, "second")).value.get
 

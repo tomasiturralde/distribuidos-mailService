@@ -13,14 +13,8 @@ object MailServer extends App {
   /*val stubManager = new ServiceManager
   stubManager.startConnection("0.0.0.0", 50001, "mail")*/
 
-  val channel: ManagedChannel = ManagedChannelBuilder.forAddress("user", 50000)
-    .usePlaintext(true)
-    .build()
-
-  val stub: UserServiceGrpc.UserServiceStub = UserServiceGrpc.stub(channel)
-
   val server = ServerBuilder.forPort(50001)
-    .addService(MailServiceGrpc.bindService(new MailService(stub), ExecutionContext.global))
+    .addService(MailServiceGrpc.bindService(new MailService(new StubManager), ExecutionContext.global))
     .build()
 
   server.start()
